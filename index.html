@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ソートアルゴリズム可視化ツール</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #1a1a2e;
+      color: #eee;
+      padding: 20px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #00d9ff;
+      flex-shrink: 0;
+    }
+
+    .controls {
+      background: #16213e;
+      padding: 20px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 15px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .control-group label {
+      font-size: 0.9em;
+      color: #aaa;
+    }
+
+    select,
+    input,
+    button {
+      padding: 8px 12px;
+      border-radius: 5px;
+      border: none;
+      font-size: 1em;
+    }
+
+    select {
+      background: #0f3460;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    input[type="range"] {
+      background: transparent;
+      cursor: pointer;
+      width: 150px;
+    }
+
+    input[type="range"]::-webkit-slider-runnable-track {
+      background: #0f3460;
+      height: 8px;
+      border-radius: 4px;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      background: #00d9ff;
+      border-radius: 50%;
+      cursor: pointer;
+      margin-top: -6px;
+    }
+
+    input[type="range"]::-moz-range-track {
+      background: #0f3460;
+      height: 8px;
+      border-radius: 4px;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      background: #00d9ff;
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+    }
+
+    button {
+      background: #00d9ff;
+      color: #1a1a2e;
+      font-weight: bold;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background: #00b8d4;
+    }
+
+    button:disabled {
+      background: #555;
+      cursor: not-allowed;
+    }
+
+    .visualizer-wrapper {
+      position: relative;
+      width: 100%;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-height: 300px;
+      overflow: hidden;
+    }
+
+    #canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: #0f3460;
+      border-radius: 10px;
+    }
+
+    .info-panel {
+      position: absolute;
+      top: 18px;
+      left: 18px;
+      max-width: 280px;
+      padding: 10px 14px;
+      border-radius: 8px;
+      background: rgba(15, 52, 96, 0.8);
+      border: 1px solid rgba(0, 217, 255, 0.25);
+      color: #e0f7ff;
+      font-size: 0.85em;
+      line-height: 1.4;
+      white-space: pre-line;
+      pointer-events: none;
+      backdrop-filter: blur(6px);
+    }
+
+    .stats {
+      background: #16213e;
+      padding: 15px;
+      border-radius: 10px;
+      margin-top: 20px;
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 15px;
+      flex-shrink: 0;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-item .label {
+      font-size: 0.9em;
+      color: #aaa;
+      margin-bottom: 5px;
+    }
+
+    .stat-item .value {
+      font-size: 1.5em;
+      color: #00d9ff;
+      font-weight: bold;
+    }
+
+    .sound-options {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      font-size: 0.85em;
+    }
+
+    .sound-options label {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      color: #ccc;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container">
+    <h1>ソートアルゴリズム可視化ツール</h1>
+
+    <div class="controls">
+      <div class="control-group">
+        <label for="algorithm">アルゴリズム</label>
+        <select id="algorithm">
+          <option value="bubble">バブルソート</option>
+          <option value="selection">選択ソート</option>
+          <option value="insertion">挿入ソート</option>
+          <option value="quick">クイックソート</option>
+          <option value="quick-mt">クイックソート(マルチスレッド)</option>
+          <option value="merge">マージソート</option>
+          <option value="heap">ヒープソート</option>
+          <option value="shell">シェルソート</option>
+          <option value="comb">コムソート</option>
+          <option value="cocktail">カクテルシェーカーソート</option>
+          <option value="gnome">ノームソート</option>
+          <option value="library">図書館ソート</option>
+          <option value="intro">イントロソート</option>
+          <option value="odd-even">奇偶転置ソート</option>
+          <option value="cycle">サイクルソート</option>
+          <option value="pancake">パンケーキソート</option>
+          <option value="patience">ペイシェンスソート</option>
+          <option value="tournament">トーナメントソート</option>
+          <option value="smooth">スムースソート</option>
+          <option value="tim">Timソート</option>
+          <option value="sleep">スリープソート</option>
+          <option value="bitonic">バイトニックソート</option>
+          <option value="bitonic-mt">バイトニックソート(マルチスレッド)</option>
+          <option value="radix-lsd">基数ソート(LSD/基数10)</option>
+          <option value="radix-msd">基数ソート(MSD/基数10)</option>
+          <option value="radix-binary">基数ソート(基数2/バイナリ)</option>
+          <option value="radix-hex">基数ソート(基数16/16進数)</option>
+          <option value="counting">カウントソート</option>
+          <option value="bucket">バケットソート</option>
+          <option value="pdq">PDQソート</option>
+          <option value="block">ブロックソート</option>
+          <option value="spread">スプレッドソート</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="layout">レイアウト</label>
+        <select id="layout">
+          <option value="linear">横並び</option>
+          <option value="radial">円形</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="distribution">初期状態</label>
+        <select id="distribution">
+          <option value="random">ランダム</option>
+          <option value="nearly-sorted">8割ソート済み</option>
+          <option value="reversed">反転(大→小)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
+        <label for="size">データ数: <span id="sizeValue">512</span></label>
+        <input type="range" id="size" min="64" max="1024" value="512" step="64">
+      </div>
+
+      <div class="control-group">
+        <label for="speed">速度: <span id="speedValue">10</span></label>
+        <input type="range" id="speed" min="1" max="100" value="10">
+      </div>
+
+      <button id="start">開始</button>
+      <button id="pause">一時停止</button>
+      <button id="reset">リセット</button>
+      <button id="demo">デモモード</button>
+
+      <div class="control-group">
+        <label>
+          <input type="checkbox" id="soundToggle">
+          <span>音響効果</span>
+        </label>
+      </div>
+
+      <div class="control-group">
+        <label>音を鳴らすタイミング</label>
+        <div class="sound-options">
+          <label><input type="checkbox" id="soundCompare" checked>比較</label>
+          <label><input type="checkbox" id="soundSwap" checked>交換</label>
+          <label><input type="checkbox" id="soundAccess">アクセス(比較代替)</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="visualizer-wrapper">
+      <canvas id="canvas"></canvas>
+      <div id="algorithmInfo" class="info-panel"></div>
+    </div>
+
+    <div class="stats">
+      <div class="stat-item">
+        <div class="label">比較回数</div>
+        <div class="value" id="comparisons">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="label">交換回数</div>
+        <div class="value" id="swaps">0</div>
+      </div>
+      <div class="stat-item">
+        <div class="label">経過時間</div>
+        <div class="value" id="time">0.00s</div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.ts"></script>
+</body>
+
+</html>
