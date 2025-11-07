@@ -243,6 +243,15 @@
       </div>
 
       <div class="control-group">
+        <label for="preset">初期状態</label>
+        <select id="preset">
+          <option value="random">ランダム</option>
+          <option value="nearly">8割がたソート済み</option>
+          <option value="reversed">反転(大→小)</option>
+        </select>
+      </div>
+
+      <div class="control-group">
         <label for="size">データ数: <span id="sizeValue">512</span></label>
         <input type="range" id="size" min="64" max="1024" value="512" step="64">
       </div>

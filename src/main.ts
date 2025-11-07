@@ -80,10 +80,18 @@ const DEMO_SIZE_LIMITS: Record<string, number> = {
   patience: 48,
   library: 80,
   smooth: 80,
+  tournament: 64,
   sleep: 24,
-  'bitonic': 96,
-  'bitonic-mt': 96
+  'bitonic': 1024,
+  'bitonic-mt': 1024
 };
+
+type Preset = 'random' | 'nearly' | 'reversed';
+
+interface DemoItem {
+  algorithm: string;
+  preset: Preset;
+}
 
 /**
  * アプリケーションの状態管理
@@ -94,10 +102,11 @@ class App {
   private currentGenerator: Generator<SortStep> | AsyncGenerator<SortStep> | null = null;
   private isRunning = false;
   private isDemoMode = false;
-  private demoQueue: string[] = [];
+  private demoQueue: DemoItem[] = [];
   private demoBaseArray: number[] = [];
   private demoOriginalSize = 0;
   private demoOriginalSizeLabel = '';
+  private demoOriginalPreset = '';
   private readonly demoDelay = 800;
   private readonly demoStartDelay = 150;
 
@@ -112,6 +121,7 @@ class App {
   private resetButton: HTMLButtonElement;
   private demoButton: HTMLButtonElement;
   private layoutSelect: HTMLSelectElement;
+  private presetSelect: HTMLSelectElement;
   private soundToggle: HTMLInputElement;
   private soundCompareToggle: HTMLInputElement;
   private soundSwapToggle: HTMLInputElement;
@@ -136,7 +146,8 @@ class App {
     this.pauseButton = document.getElementById('pause') as HTMLButtonElement;
     this.resetButton = document.getElementById('reset') as HTMLButtonElement;
     this.demoButton = document.getElementById('demo') as HTMLButtonElement;
-    this.layoutSelect = document.getElementById('layout') as HTMLSelectElement;
+  this.layoutSelect = document.getElementById('layout') as HTMLSelectElement;
+  this.presetSelect = document.getElementById('preset') as HTMLSelectElement;
     this.soundToggle = document.getElementById('soundToggle') as HTMLInputElement;
     this.soundCompareToggle = document.getElementById('soundCompare') as HTMLInputElement;
     this.soundSwapToggle = document.getElementById('soundSwap') as HTMLInputElement;
@@ -190,6 +201,12 @@ class App {
       }
     });
 
+    this.presetSelect.addEventListener('change', () => {
+      if (!this.isRunning) {
+        this.resetArray();
+      }
+    });
+
     this.algorithmSelect.addEventListener('change', () => {
       this.updateAlgorithmInfo(this.algorithmSelect.value);
     });
@@ -240,13 +257,35 @@ class App {
     return Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
   }
 
+  private generateArrayByPreset(size: number, preset: Preset): number[] {
+    switch (preset) {
+      case 'random':
+        return this.generateArray(size);
+      case 'nearly': {
+        const arr = Array.from({ length: size }, (_, i) => i + 1);
+        const swaps = Math.max(1, Math.floor(size * 0.2));
+        for (let s = 0; s < swaps; s++) {
+          const i = Math.floor(Math.random() * size);
+          const j = Math.floor(Math.random() * size);
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+      case 'reversed':
+        return Array.from({ length: size }, (_, i) => size - i);
+      default:
+        return this.generateArray(size);
+    }
+  }
+
   /**
    * 配列をリセット
    */
   private resetArray(): void {
     const size = parseInt(this.sizeInput.value);
     this.visualizer.setArraySize(size);
-    this.currentArray = this.generateArray(size);
+  const preset = (this.presetSelect?.value as Preset) || 'random';
+  this.currentArray = this.generateArrayByPreset(size, preset);
     this.visualizer.drawArray(this.currentArray);
     this.updateStats({ comparisons: 0, swaps: 0, time: 0 });
     this.applySoundSettings();
@@ -267,9 +306,17 @@ class App {
     }
 
     this.isDemoMode = true;
-    this.demoQueue = algorithms.slice();
-    this.demoOriginalSize = parseInt(this.sizeInput.value);
-    this.demoOriginalSizeLabel = this.sizeValue.textContent ?? String(this.demoOriginalSize);
+    this.demoQueue = [];
+    for (const alg of algorithms) {
+      this.demoQueue.push(
+        { algorithm: alg, preset: 'random' },
+        { algorithm: alg, preset: 'nearly' },
+        { algorithm: alg, preset: 'reversed' }
+      );
+    }
+  this.demoOriginalSize = parseInt(this.sizeInput.value);
+  this.demoOriginalSizeLabel = this.sizeValue.textContent ?? String(this.demoOriginalSize);
+  this.demoOriginalPreset = this.presetSelect.value;
 
     if (!this.soundToggle.checked) {
       this.soundToggle.checked = true;
@@ -283,6 +330,7 @@ class App {
     this.algorithmSelect.disabled = true;
     this.sizeInput.disabled = true;
     this.layoutSelect.disabled = true;
+  this.presetSelect.disabled = true;
     this.soundCompareToggle.disabled = true;
     this.soundSwapToggle.disabled = true;
     this.soundAccessToggle.disabled = true;
@@ -307,6 +355,7 @@ class App {
       this.algorithmSelect.disabled = false;
       this.sizeInput.disabled = false;
       this.layoutSelect.disabled = false;
+  this.presetSelect.disabled = false;
       this.soundToggle.disabled = false;
       this.soundCompareToggle.disabled = false;
       this.soundSwapToggle.disabled = false;
@@ -318,23 +367,29 @@ class App {
       }
       this.demoOriginalSize = 0;
       this.demoOriginalSizeLabel = '';
+      if (this.demoOriginalPreset) {
+        this.presetSelect.value = this.demoOriginalPreset;
+        this.demoOriginalPreset = '';
+      }
       this.resetArray();
       return;
     }
 
-    const nextAlgorithm = this.demoQueue.shift();
-    if (!nextAlgorithm) {
+    const nextItem = this.demoQueue.shift();
+    if (!nextItem) {
       this.runNextDemo();
       return;
     }
 
-    const size = this.getDemoArraySize(nextAlgorithm);
+  const size = this.getDemoArraySize(nextItem.algorithm);
     this.sizeInput.value = String(size);
     this.sizeValue.textContent = String(size);
     this.visualizer.setArraySize(size);
-    this.algorithmSelect.value = nextAlgorithm;
-    this.updateAlgorithmInfo(nextAlgorithm);
-    this.demoBaseArray = this.generateArray(size);
+  // Reflect current preset to UI as well
+  this.presetSelect.value = nextItem.preset;
+    this.algorithmSelect.value = nextItem.algorithm;
+    this.updateAlgorithmInfo(nextItem.algorithm);
+    this.demoBaseArray = this.generateArrayByPreset(size, nextItem.preset);
     this.currentArray = [...this.demoBaseArray];
     this.visualizer.drawArray(this.currentArray);
     this.updateStats({ comparisons: 0, swaps: 0, time: 0 });
@@ -483,9 +538,13 @@ class App {
       this.sizeValue.textContent = this.demoOriginalSizeLabel || String(this.demoOriginalSize);
       this.visualizer.setArraySize(this.demoOriginalSize);
     }
+    if (this.demoOriginalPreset) {
+      this.presetSelect.value = this.demoOriginalPreset;
+      this.demoOriginalPreset = '';
+    }
     this.demoOriginalSize = 0;
     this.demoOriginalSizeLabel = '';
-
+    
     this.resetArray();
 
     // ボタンの状態を更新
@@ -495,6 +554,7 @@ class App {
     this.sizeInput.disabled = false;
     this.demoButton.disabled = false;
     this.layoutSelect.disabled = false;
+  this.presetSelect.disabled = false;
     this.soundToggle.disabled = false;
     this.soundCompareToggle.disabled = false;
     this.soundSwapToggle.disabled = false;
@@ -522,6 +582,7 @@ class App {
     this.sizeInput.disabled = false;
     this.demoButton.disabled = false;
     this.layoutSelect.disabled = false;
+  this.presetSelect.disabled = false;
     this.soundToggle.disabled = false;
     this.soundCompareToggle.disabled = false;
     this.soundSwapToggle.disabled = false;
@@ -567,9 +628,20 @@ class App {
   }
 
   private getDemoArraySize(algorithm: string): number {
-    const baseSize = this.demoOriginalSize || parseInt(this.sizeInput.value);
+    const baseSize = Math.min(1024, this.demoOriginalSize || parseInt(this.sizeInput.value));
     const limit = DEMO_SIZE_LIMITS[algorithm];
-    const target = limit ? Math.min(baseSize, limit) : baseSize;
+    let target = limit ? Math.min(baseSize, limit) : baseSize;
+
+    // バイトニック系は配列長が2の乗数の方が自然なので、直近の2の乗数以下に調整
+    if (algorithm === 'bitonic' || algorithm === 'bitonic-mt') {
+      const pow2 = (n: number): number => {
+        if (n < 1) return 1;
+        const p = 1 << Math.floor(Math.log2(n));
+        return p;
+      };
+      target = pow2(target);
+    }
+
     return Math.max(4, target);
   }
 }
