@@ -138,13 +138,13 @@ class App {
     this.demoButton = document.getElementById('demo') as HTMLButtonElement;
     this.layoutSelect = document.getElementById('layout') as HTMLSelectElement;
     this.soundToggle = document.getElementById('soundToggle') as HTMLInputElement;
-  this.soundCompareToggle = document.getElementById('soundCompare') as HTMLInputElement;
-  this.soundSwapToggle = document.getElementById('soundSwap') as HTMLInputElement;
-  this.soundAccessToggle = document.getElementById('soundAccess') as HTMLInputElement;
+    this.soundCompareToggle = document.getElementById('soundCompare') as HTMLInputElement;
+    this.soundSwapToggle = document.getElementById('soundSwap') as HTMLInputElement;
+    this.soundAccessToggle = document.getElementById('soundAccess') as HTMLInputElement;
     this.comparisonsDisplay = document.getElementById('comparisons') as HTMLElement;
     this.swapsDisplay = document.getElementById('swaps') as HTMLElement;
     this.timeDisplay = document.getElementById('time') as HTMLElement;
-  this.algorithmInfoPanel = document.getElementById('algorithmInfo');
+    this.algorithmInfoPanel = document.getElementById('algorithmInfo');
 
     // Visualizerを初期化
     this.visualizer = new Visualizer({
@@ -160,7 +160,7 @@ class App {
 
     // 初期配列を生成して描画
     this.resetArray();
-  this.updateAlgorithmInfo(this.algorithmSelect.value);
+    this.updateAlgorithmInfo(this.algorithmSelect.value);
   }
 
   /**
@@ -250,7 +250,7 @@ class App {
     this.visualizer.drawArray(this.currentArray);
     this.updateStats({ comparisons: 0, swaps: 0, time: 0 });
     this.applySoundSettings();
-  this.updateAlgorithmInfo(this.algorithmSelect.value);
+    this.updateAlgorithmInfo(this.algorithmSelect.value);
   }
 
   /**
@@ -308,9 +308,9 @@ class App {
       this.sizeInput.disabled = false;
       this.layoutSelect.disabled = false;
       this.soundToggle.disabled = false;
-  this.soundCompareToggle.disabled = false;
-  this.soundSwapToggle.disabled = false;
-  this.soundAccessToggle.disabled = false;
+      this.soundCompareToggle.disabled = false;
+      this.soundSwapToggle.disabled = false;
+      this.soundAccessToggle.disabled = false;
       if (this.demoOriginalSize > 0) {
         this.sizeInput.value = String(this.demoOriginalSize);
         this.sizeValue.textContent = this.demoOriginalSizeLabel || String(this.demoOriginalSize);
@@ -328,14 +328,14 @@ class App {
       return;
     }
 
-  const size = this.getDemoArraySize(nextAlgorithm);
-  this.sizeInput.value = String(size);
-  this.sizeValue.textContent = String(size);
-  this.visualizer.setArraySize(size);
-  this.algorithmSelect.value = nextAlgorithm;
-  this.updateAlgorithmInfo(nextAlgorithm);
-  this.demoBaseArray = this.generateArray(size);
-  this.currentArray = [...this.demoBaseArray];
+    const size = this.getDemoArraySize(nextAlgorithm);
+    this.sizeInput.value = String(size);
+    this.sizeValue.textContent = String(size);
+    this.visualizer.setArraySize(size);
+    this.algorithmSelect.value = nextAlgorithm;
+    this.updateAlgorithmInfo(nextAlgorithm);
+    this.demoBaseArray = this.generateArray(size);
+    this.currentArray = [...this.demoBaseArray];
     this.visualizer.drawArray(this.currentArray);
     this.updateStats({ comparisons: 0, swaps: 0, time: 0 });
 
