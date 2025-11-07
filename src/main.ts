@@ -7,7 +7,6 @@ import {
   selectionSort,
   insertionSort,
   quickSort,
-  quickSortMultiThread,
   mergeSort,
   heapSort,
   bitonicSort,
@@ -32,9 +31,6 @@ import {
   radixSortHex,
   countingSort,
   bucketSort,
-  pdqSort,
-  blockSort,
-  spreadSort,
   type SortStep
 } from './algorithms';
 import { Visualizer, type SoundSettings } from './visualizer';
@@ -44,7 +40,6 @@ const ALGORITHM_INFO: Record<string, string[]> = {
   selection: ['選択ソート', '不安定・選択型', '最小値を選んで前方へ配置', '計算量 O(n^2)', '書き込み回数が少ない'],
   insertion: ['挿入ソート', '安定・挿入型', '部分配列に挿入しながら整列', '平均/最悪 O(n^2)', 'ほぼ整列済みで高速'],
   quick: ['クイックソート', '分割統治・不安定', 'ピボットで左右に分割', '平均 O(n log n)', '最悪 O(n^2) 対策に軸選択が鍵'],
-  'quick-mt': ['クイックソート(MT)', 'Web Worker併用の並列版', '左右の部分列をバックグラウンド処理', '平均 O(n log n)', 'ステップ生成を別スレッドで実行'],
   merge: ['マージソート', '安定・分割統治', '再帰分割して併合', '計算量 O(n log n)', '追加メモリ O(n) が必要'],
   heap: ['ヒープソート', '選択型・不安定', '最大ヒープを構築して抽出', '計算量 O(n log n)', '追加メモリ不要'],
   shell: ['シェルソート', '改良挿入ソート', 'ギャップを縮め段階的に整列', '平均 O(n^(3/2)) 付近', 'ギャップ選択で性能が変動'],
@@ -69,20 +64,8 @@ const ALGORITHM_INFO: Record<string, string[]> = {
   'radix-hex': ['基数ソート 基数16', '4bit 単位の LSD 処理', '16 バケットで分配', '計算量 O((w/4)*n)', 'バイト列操作に適合'],
   counting: ['カウントソート', '整数限定の線形ソート', '出現頻度をカウント', '計算量 O(n+k)', '値域が小さいほど有効'],
   bucket: ['バケットソート', '分布利用の分割法', '値を区間ごとに格納', '平均 O(n+k)', 'バケット内は挿入ソート'],
-  pdq: ['PDQソート', 'Pattern-Defeating Quicksort', 'Rustのstd::sortで採用', '計算量 O(n log n)', 'パターン検出で最悪ケース回避'],
-  block: ['ブロックソート', '安定・省メモリマージ', 'in-placeマージソート', '計算量 O(n log n)', '追加メモリ O(1)'],
-  spread: ['スプレッドソート', '整数特化の高速ソート', '適応的バケット化', '計算量 O(n)', 'Boost C++で採用'],
   default: ['ソートビジュアル', '左のリストからアルゴリズム選択', '各行120文字以内で要点表示', '比較/交換音も設定可能', '円形レイアウトも試せます']
 };
-
-type DistributionPreset = 'random' | 'nearly-sorted' | 'reversed';
-
-const DEMO_DISTRIBUTION_SEQUENCE: DistributionPreset[] = ['random', 'nearly-sorted', 'reversed'];
-
-interface DemoTask {
-  algorithm: string;
-  distribution: DistributionPreset;
-}
 
 const DEMO_SIZE_LIMITS: Record<string, number> = {
   bubble: 64,
@@ -99,101 +82,7 @@ const DEMO_SIZE_LIMITS: Record<string, number> = {
   smooth: 80,
   sleep: 24,
   'bitonic': 96,
-  'bitonic-mt': 96,
-  quick: 1024,
-  'quick-mt': 1536,
-  intro: 1024
-};
-
-/**
- * アルゴリズムの計算量タイプ
- */
-const ALGORITHM_COMPLEXITY_TYPE: Record<string, 'n2' | 'nlogn' | 'n' | 'special'> = {
-  // O(n^2)
-  bubble: 'n2',
-  selection: 'n2',
-  insertion: 'n2',
-  cocktail: 'n2',
-  gnome: 'n2',
-  'odd-even': 'n2',
-  cycle: 'n2',
-  pancake: 'n2',
-  shell: 'n2',
-  comb: 'n2',
-
-  // O(n log n)
-  quick: 'nlogn',
-  'quick-mt': 'nlogn',
-  merge: 'nlogn',
-  heap: 'nlogn',
-  intro: 'nlogn',
-  tim: 'nlogn',
-  pdq: 'nlogn',
-  block: 'nlogn',
-  smooth: 'nlogn',
-  library: 'nlogn',
-  patience: 'nlogn',
-  tournament: 'nlogn',
-  bitonic: 'nlogn',
-  'bitonic-mt': 'nlogn',
-
-  // O(n)
-  'radix-lsd': 'n',
-  'radix-msd': 'n',
-  'radix-binary': 'n',
-  'radix-hex': 'n',
-  counting: 'n',
-  bucket: 'n',
-  spread: 'n',
-
-  // 特殊
-  sleep: 'special'
-};
-
-/**
- * 各アルゴリズムの相対的な速度係数 (同じ計算量クラス内での比較)
- * 1.0が標準的な速度
- */
-const ALGORITHM_SPEED_FACTOR: Record<string, number> = {
-  // O(n^2) - 定数項の違い
-  bubble: 1.0,     // 基準
-  selection: 0.9,
-  insertion: 0.75,
-  cocktail: 1.1,
-  gnome: 1.25,
-  'odd-even': 1.4,
-  cycle: 1.5,
-  pancake: 1.75,
-  shell: 0.25,     // かなり速い
-  comb: 0.2,
-
-  // O(n log n) - 定数項の違い
-  quick: 1.0,      // 基準
-  'quick-mt': 0.65,
-  merge: 1.2,
-  heap: 1.5,
-  intro: 1.05,
-  tim: 1.3,
-  pdq: 0.95,
-  block: 1.4,
-  smooth: 1.6,
-  library: 2.0,
-  patience: 2.5,
-  tournament: 2.0,
-  bitonic: 3.0,
-  'bitonic-mt': 1.5,
-
-  // O(n) - 定数項の違い
-  'radix-lsd': 1.0,
-  'radix-msd': 1.1,
-  'radix-binary': 1.2,
-  'radix-hex': 0.85,
-  counting: 0.75,
-  bucket: 1.0,
-  spread: 0.85,
-
-  // 特殊
-  sleep: 0.1
+  'bitonic-mt': 96
 };
 
 /**
@@ -205,20 +94,12 @@ class App {
   private currentGenerator: Generator<SortStep> | AsyncGenerator<SortStep> | null = null;
   private isRunning = false;
   private isDemoMode = false;
-  private currentDistribution: DistributionPreset = 'random';
-  private demoQueue: DemoTask[] = [];
+  private demoQueue: string[] = [];
   private demoBaseArray: number[] = [];
-  private demoCurrentDistribution: DistributionPreset = 'random';
   private demoOriginalSize = 0;
   private demoOriginalSizeLabel = '';
-  private demoOriginalSpeed = 0;
-  private demoOriginalDistribution: DistributionPreset = 'random';
   private readonly demoDelay = 800;
   private readonly demoStartDelay = 150;
-  private readonly demoSpeed = 100;  // デモモード時の固定速度
-  private benchmarkBaseSize = 0;  // ベンチマーク時のデータ数
-  private benchmarkFactor = 1.0;  // CPU性能係数 (目標時間/実測時間)
-  private demoAlgorithmSizes = new Map<string, number>();
 
   // DOM要素
   private algorithmSelect: HTMLSelectElement;
@@ -231,7 +112,6 @@ class App {
   private resetButton: HTMLButtonElement;
   private demoButton: HTMLButtonElement;
   private layoutSelect: HTMLSelectElement;
-  private distributionSelect: HTMLSelectElement;
   private soundToggle: HTMLInputElement;
   private soundCompareToggle: HTMLInputElement;
   private soundSwapToggle: HTMLInputElement;
@@ -257,7 +137,6 @@ class App {
     this.resetButton = document.getElementById('reset') as HTMLButtonElement;
     this.demoButton = document.getElementById('demo') as HTMLButtonElement;
     this.layoutSelect = document.getElementById('layout') as HTMLSelectElement;
-    this.distributionSelect = document.getElementById('distribution') as HTMLSelectElement;
     this.soundToggle = document.getElementById('soundToggle') as HTMLInputElement;
   this.soundCompareToggle = document.getElementById('soundCompare') as HTMLInputElement;
   this.soundSwapToggle = document.getElementById('soundSwap') as HTMLInputElement;
@@ -311,12 +190,6 @@ class App {
       }
     });
 
-    this.distributionSelect.addEventListener('change', () => {
-      if (!this.isRunning) {
-        this.resetArray();
-      }
-    });
-
     this.algorithmSelect.addEventListener('change', () => {
       this.updateAlgorithmInfo(this.algorithmSelect.value);
     });
@@ -363,38 +236,8 @@ class App {
   /**
    * ランダムな配列を生成
    */
-  private generateArray(size: number, preset?: DistributionPreset): number[] {
-    const distribution = preset ?? this.getSelectedDistribution();
-
-    if (distribution === 'nearly-sorted') {
-      const array = Array.from({ length: size }, (_, index) => index + 1);
-      const unsortedCount = Math.max(1, Math.floor(size * 0.2));
-      const start = size - unsortedCount;
-
-      for (let i = start; i < size; i++) {
-        const swapIndex = start + Math.floor(Math.random() * unsortedCount);
-        [array[i], array[swapIndex]] = [array[swapIndex], array[i]];
-      }
-
-      return array;
-    }
-
-    if (distribution === 'reversed') {
-      return Array.from({ length: size }, (_, index) => size - index);
-    }
-
+  private generateArray(size: number): number[] {
     return Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
-  }
-
-  private getSelectedDistribution(): DistributionPreset {
-    return this.parseDistribution(this.distributionSelect?.value);
-  }
-
-  private parseDistribution(value: string | null | undefined): DistributionPreset {
-    if (value === 'nearly-sorted' || value === 'reversed') {
-      return value;
-    }
-    return 'random';
   }
 
   /**
@@ -402,10 +245,8 @@ class App {
    */
   private resetArray(): void {
     const size = parseInt(this.sizeInput.value);
-    const distribution = this.getSelectedDistribution();
     this.visualizer.setArraySize(size);
-    this.currentDistribution = distribution;
-    this.currentArray = this.generateArray(size, distribution);
+    this.currentArray = this.generateArray(size);
     this.visualizer.drawArray(this.currentArray);
     this.updateStats({ comparisons: 0, swaps: 0, time: 0 });
     this.applySoundSettings();
@@ -415,7 +256,7 @@ class App {
   /**
    * デモモードを開始
    */
-  private async startDemo(): Promise<void> {
+  private startDemo(): void {
     if (this.isRunning || this.isDemoMode) {
       return;
     }
@@ -426,20 +267,9 @@ class App {
     }
 
     this.isDemoMode = true;
-    this.demoQueue = algorithms.flatMap((algorithm) =>
-      DEMO_DISTRIBUTION_SEQUENCE.map((distribution): DemoTask => ({ algorithm, distribution }))
-    );
-    this.demoAlgorithmSizes.clear();
+    this.demoQueue = algorithms.slice();
     this.demoOriginalSize = parseInt(this.sizeInput.value);
     this.demoOriginalSizeLabel = this.sizeValue.textContent ?? String(this.demoOriginalSize);
-    this.demoOriginalSpeed = parseInt(this.speedInput.value);
-    this.demoOriginalDistribution = this.getSelectedDistribution();
-    this.demoCurrentDistribution = 'random';
-
-    // デモモード用の速度に設定
-    this.speedInput.value = String(this.demoSpeed);
-    this.speedValue.textContent = String(this.demoSpeed);
-    this.visualizer.setSpeed(this.demoSpeed);
 
     if (!this.soundToggle.checked) {
       this.soundToggle.checked = true;
@@ -452,19 +282,10 @@ class App {
     this.pauseButton.disabled = true;
     this.algorithmSelect.disabled = true;
     this.sizeInput.disabled = true;
-    this.speedInput.disabled = true;
     this.layoutSelect.disabled = true;
-    this.distributionSelect.disabled = true;
     this.soundCompareToggle.disabled = true;
     this.soundSwapToggle.disabled = true;
     this.soundAccessToggle.disabled = true;
-
-    // ベンチマーク実行 (初回のみ)
-    if (this.benchmarkBaseSize === 0) {
-      console.log('[Demo] Running benchmark...');
-      await this.runBenchmark();
-      console.log('[Demo] Benchmark completed');
-    }
 
     this.runNextDemo();
   }
@@ -485,62 +306,36 @@ class App {
       this.pauseButton.disabled = true;
       this.algorithmSelect.disabled = false;
       this.sizeInput.disabled = false;
-      this.speedInput.disabled = false;
       this.layoutSelect.disabled = false;
       this.soundToggle.disabled = false;
   this.soundCompareToggle.disabled = false;
   this.soundSwapToggle.disabled = false;
   this.soundAccessToggle.disabled = false;
-      this.distributionSelect.disabled = false;
       if (this.demoOriginalSize > 0) {
         this.sizeInput.value = String(this.demoOriginalSize);
         this.sizeValue.textContent = this.demoOriginalSizeLabel || String(this.demoOriginalSize);
         this.visualizer.setArraySize(this.demoOriginalSize);
       }
-      if (this.demoOriginalSpeed > 0) {
-        this.speedInput.value = String(this.demoOriginalSpeed);
-        this.speedValue.textContent = String(this.demoOriginalSpeed);
-        this.visualizer.setSpeed(this.demoOriginalSpeed);
-      }
-      this.distributionSelect.value = this.demoOriginalDistribution;
-      this.currentDistribution = this.getSelectedDistribution();
       this.demoOriginalSize = 0;
       this.demoOriginalSizeLabel = '';
-      this.demoOriginalSpeed = 0;
-      this.demoCurrentDistribution = this.getSelectedDistribution();
       this.resetArray();
       return;
     }
 
-    const nextTask = this.demoQueue.shift();
-    if (!nextTask) {
+    const nextAlgorithm = this.demoQueue.shift();
+    if (!nextAlgorithm) {
       this.runNextDemo();
       return;
     }
 
-    const { algorithm, distribution } = nextTask;
-    this.demoCurrentDistribution = distribution;
-
-    let size = this.demoAlgorithmSizes.get(algorithm);
-    if (distribution === 'random') {
-      size = this.getDemoArraySize(algorithm);
-      this.demoAlgorithmSizes.set(algorithm, size);
-    } else if (size === undefined) {
-      size = this.getDemoArraySize(algorithm);
-      this.demoAlgorithmSizes.set(algorithm, size);
-    }
-
-    const arraySize = size ?? this.getDemoArraySize(algorithm);
-    this.sizeInput.value = String(arraySize);
-    this.sizeValue.textContent = String(arraySize);
-    this.visualizer.setArraySize(arraySize);
-    this.algorithmSelect.value = algorithm;
-    this.updateAlgorithmInfo(algorithm);
-    this.distributionSelect.value = distribution;
-    const baseArray = this.generateArray(arraySize, distribution);
-    this.currentDistribution = distribution;
-    this.demoBaseArray = baseArray;
-    this.currentArray = [...baseArray];
+  const size = this.getDemoArraySize(nextAlgorithm);
+  this.sizeInput.value = String(size);
+  this.sizeValue.textContent = String(size);
+  this.visualizer.setArraySize(size);
+  this.algorithmSelect.value = nextAlgorithm;
+  this.updateAlgorithmInfo(nextAlgorithm);
+  this.demoBaseArray = this.generateArray(size);
+  this.currentArray = [...this.demoBaseArray];
     this.visualizer.drawArray(this.currentArray);
     this.updateStats({ comparisons: 0, swaps: 0, time: 0 });
 
@@ -566,8 +361,6 @@ class App {
         return insertionSort(array);
       case 'quick':
         return quickSort(array);
-      case 'quick-mt':
-        return quickSortMultiThread(array);
       case 'merge':
         return mergeSort(array);
       case 'heap':
@@ -616,12 +409,6 @@ class App {
         return countingSort(array);
       case 'bucket':
         return bucketSort(array);
-      case 'pdq':
-        return pdqSort(array);
-      case 'block':
-        return blockSort(array);
-      case 'spread':
-        return spreadSort(array);
       default:
         return bubbleSort(array);
     }
@@ -691,20 +478,13 @@ class App {
     this.isDemoMode = false;
     this.demoQueue = [];
     this.demoBaseArray = [];
-    this.demoAlgorithmSizes.clear();
     if (this.demoOriginalSize > 0) {
       this.sizeInput.value = String(this.demoOriginalSize);
       this.sizeValue.textContent = this.demoOriginalSizeLabel || String(this.demoOriginalSize);
       this.visualizer.setArraySize(this.demoOriginalSize);
     }
-    if (this.demoOriginalSpeed > 0) {
-      this.speedInput.value = String(this.demoOriginalSpeed);
-      this.speedValue.textContent = String(this.demoOriginalSpeed);
-      this.visualizer.setSpeed(this.demoOriginalSpeed);
-    }
     this.demoOriginalSize = 0;
     this.demoOriginalSizeLabel = '';
-    this.demoOriginalSpeed = 0;
 
     this.resetArray();
 
@@ -713,14 +493,12 @@ class App {
     this.pauseButton.disabled = true;
     this.algorithmSelect.disabled = false;
     this.sizeInput.disabled = false;
-    this.speedInput.disabled = false;
     this.demoButton.disabled = false;
     this.layoutSelect.disabled = false;
     this.soundToggle.disabled = false;
     this.soundCompareToggle.disabled = false;
     this.soundSwapToggle.disabled = false;
     this.soundAccessToggle.disabled = false;
-    this.distributionSelect.disabled = false;
     this.applySoundSettings();
   }
 
@@ -788,103 +566,7 @@ class App {
     this.visualizer.setSoundSettings(this.getSoundSettings());
   }
 
-  /**
-   * ベンチマークを実行してCPU性能を測定
-   */
-  private async runBenchmark(): Promise<void> {
-    const benchmarkSize = 200;  // ベンチマーク用のデータサイズ
-    const targetTime = 17.5;    // 目標時間(秒): 15-20秒の中央値
-    const benchmarkAlgorithm = 'quick';  // 基準アルゴリズム
-
-    console.log('[Benchmark] Starting with size:', benchmarkSize, 'speed:', this.demoSpeed);
-
-    // 速度をデモモード速度に設定
-    this.visualizer.setSpeed(this.demoSpeed);
-
-    const testArray = this.generateArray(benchmarkSize, 'random');
-    const generator = this.getSortGenerator(benchmarkAlgorithm, testArray);
-
-    // Visualizerを使って実速度でベンチマーク実行
-    return new Promise<void>((resolve) => {
-      const startTime = performance.now();
-
-      this.visualizer.start(
-        generator,
-        () => {}, // 統計更新は不要
-        () => {
-          const endTime = performance.now();
-          const actualTime = (endTime - startTime) / 1000;  // 秒に変換
-
-          console.log('[Benchmark] Completed in:', actualTime, 'seconds');
-
-          // CPU性能係数を計算: 目標時間 / 実測時間
-          this.benchmarkFactor = targetTime / actualTime;
-          this.benchmarkBaseSize = benchmarkSize;
-
-          console.log('[Benchmark] Performance factor:', this.benchmarkFactor);
-
-          // ベンチマーク完了後に停止
-          this.visualizer.stop();
-          resolve();
-        }
-      );
-    });
-  }
-
-  /**
-   * アルゴリズムに応じた最適なデータ数を計算
-   */
-  private calculateOptimalSize(algorithm: string): number {
-    // ベンチマーク未実施の場合はデフォルト値
-    if (this.benchmarkBaseSize === 0) {
-      const limit = DEMO_SIZE_LIMITS[algorithm];
-      return limit || 512;
-    }
-
-    const complexityType = ALGORITHM_COMPLEXITY_TYPE[algorithm] || 'nlogn';
-    const speedFactor = ALGORITHM_SPEED_FACTOR[algorithm] || 1.0;
-    const baseSize = this.benchmarkBaseSize;
-    const perfFactor = this.benchmarkFactor;
-
-    let optimalSize: number;
-
-    // 計算量に応じた適切なスケーリング
-    if (complexityType === 'n2') {
-      // O(n^2): データ数を大幅に減らす必要がある
-      // n^2の性質上、データ数を1/k倍にすると時間は1/k^2倍になる
-      // 時間をperfFactor倍にしたい → データ数をsqrt(perfFactor)倍
-      optimalSize = Math.floor(baseSize * Math.sqrt(perfFactor) / speedFactor);
-    } else if (complexityType === 'nlogn') {
-      // O(n log n): ベンチマークと同じオーダー
-      // ほぼ線形にスケール
-      optimalSize = Math.floor(baseSize * perfFactor / speedFactor);
-    } else if (complexityType === 'n') {
-      // O(n): 線形、より多くのデータを処理可能
-      optimalSize = Math.floor(baseSize * perfFactor * 1.5 / speedFactor);
-    } else {
-      // special: sleep sortなど
-      optimalSize = 24;
-    }
-
-    // DEMO_SIZE_LIMITSの上限を考慮
-    const limit = DEMO_SIZE_LIMITS[algorithm];
-    const finalSize = limit ? Math.min(optimalSize, limit) : optimalSize;
-
-    // 最小値と最大値の範囲内に収める
-    const result = Math.max(16, Math.min(finalSize, 2048));
-
-    console.log(`[Size] ${algorithm}: type=${complexityType}, speed=${speedFactor}, size=${result}`);
-
-    return result;
-  }
-
   private getDemoArraySize(algorithm: string): number {
-    // 動的計算が有効な場合
-    if (this.benchmarkBaseSize > 0) {
-      return this.calculateOptimalSize(algorithm);
-    }
-
-    // フォールバック: 従来のロジック
     const baseSize = this.demoOriginalSize || parseInt(this.sizeInput.value);
     const limit = DEMO_SIZE_LIMITS[algorithm];
     const target = limit ? Math.min(baseSize, limit) : baseSize;
