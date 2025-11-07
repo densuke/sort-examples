@@ -6,5 +6,9 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true
+  },
+  worker: {
+    // モジュールワーカーとして別ファイルに出力（data:URL回避）
+    format: 'es'
   }
 });
