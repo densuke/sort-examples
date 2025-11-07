@@ -55,8 +55,8 @@ export class Visualizer {
     this.ctx = ctx;
     this.arraySize = config.arraySize;
     this.speed = config.speed;
-  this.layout = config.layout;
-  this.soundSettings = config.soundSettings;
+    this.layout = config.layout;
+    this.soundSettings = config.soundSettings;
 
     this.setupCanvas();
   }

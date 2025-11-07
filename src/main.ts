@@ -146,8 +146,8 @@ class App {
     this.pauseButton = document.getElementById('pause') as HTMLButtonElement;
     this.resetButton = document.getElementById('reset') as HTMLButtonElement;
     this.demoButton = document.getElementById('demo') as HTMLButtonElement;
-  this.layoutSelect = document.getElementById('layout') as HTMLSelectElement;
-  this.presetSelect = document.getElementById('preset') as HTMLSelectElement;
+    this.layoutSelect = document.getElementById('layout') as HTMLSelectElement;
+    this.presetSelect = document.getElementById('preset') as HTMLSelectElement;
     this.soundToggle = document.getElementById('soundToggle') as HTMLInputElement;
     this.soundCompareToggle = document.getElementById('soundCompare') as HTMLInputElement;
     this.soundSwapToggle = document.getElementById('soundSwap') as HTMLInputElement;
@@ -284,8 +284,8 @@ class App {
   private resetArray(): void {
     const size = parseInt(this.sizeInput.value);
     this.visualizer.setArraySize(size);
-  const preset = (this.presetSelect?.value as Preset) || 'random';
-  this.currentArray = this.generateArrayByPreset(size, preset);
+    const preset = (this.presetSelect?.value as Preset) || 'random';
+    this.currentArray = this.generateArrayByPreset(size, preset);
     this.visualizer.drawArray(this.currentArray);
     this.updateStats({ comparisons: 0, swaps: 0, time: 0 });
     this.applySoundSettings();
@@ -314,9 +314,9 @@ class App {
         { algorithm: alg, preset: 'reversed' }
       );
     }
-  this.demoOriginalSize = parseInt(this.sizeInput.value);
-  this.demoOriginalSizeLabel = this.sizeValue.textContent ?? String(this.demoOriginalSize);
-  this.demoOriginalPreset = this.presetSelect.value;
+    this.demoOriginalSize = parseInt(this.sizeInput.value);
+    this.demoOriginalSizeLabel = this.sizeValue.textContent ?? String(this.demoOriginalSize);
+    this.demoOriginalPreset = this.presetSelect.value;
 
     if (!this.soundToggle.checked) {
       this.soundToggle.checked = true;
@@ -330,7 +330,7 @@ class App {
     this.algorithmSelect.disabled = true;
     this.sizeInput.disabled = true;
     this.layoutSelect.disabled = true;
-  this.presetSelect.disabled = true;
+    this.presetSelect.disabled = true;
     this.soundCompareToggle.disabled = true;
     this.soundSwapToggle.disabled = true;
     this.soundAccessToggle.disabled = true;
@@ -355,7 +355,7 @@ class App {
       this.algorithmSelect.disabled = false;
       this.sizeInput.disabled = false;
       this.layoutSelect.disabled = false;
-  this.presetSelect.disabled = false;
+      this.presetSelect.disabled = false;
       this.soundToggle.disabled = false;
       this.soundCompareToggle.disabled = false;
       this.soundSwapToggle.disabled = false;
@@ -381,12 +381,12 @@ class App {
       return;
     }
 
-  const size = this.getDemoArraySize(nextItem.algorithm);
+    const size = this.getDemoArraySize(nextItem.algorithm);
     this.sizeInput.value = String(size);
     this.sizeValue.textContent = String(size);
     this.visualizer.setArraySize(size);
-  // Reflect current preset to UI as well
-  this.presetSelect.value = nextItem.preset;
+    // Reflect current preset to UI as well
+    this.presetSelect.value = nextItem.preset;
     this.algorithmSelect.value = nextItem.algorithm;
     this.updateAlgorithmInfo(nextItem.algorithm);
     this.demoBaseArray = this.generateArrayByPreset(size, nextItem.preset);
@@ -544,7 +544,7 @@ class App {
     }
     this.demoOriginalSize = 0;
     this.demoOriginalSizeLabel = '';
-    
+
     this.resetArray();
 
     // ボタンの状態を更新
@@ -554,7 +554,7 @@ class App {
     this.sizeInput.disabled = false;
     this.demoButton.disabled = false;
     this.layoutSelect.disabled = false;
-  this.presetSelect.disabled = false;
+    this.presetSelect.disabled = false;
     this.soundToggle.disabled = false;
     this.soundCompareToggle.disabled = false;
     this.soundSwapToggle.disabled = false;
@@ -582,7 +582,7 @@ class App {
     this.sizeInput.disabled = false;
     this.demoButton.disabled = false;
     this.layoutSelect.disabled = false;
-  this.presetSelect.disabled = false;
+    this.presetSelect.disabled = false;
     this.soundToggle.disabled = false;
     this.soundCompareToggle.disabled = false;
     this.soundSwapToggle.disabled = false;
