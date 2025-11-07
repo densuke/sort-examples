@@ -262,11 +262,12 @@ class App {
       case 'random':
         return this.generateArray(size);
       case 'nearly': {
+        // 左側80%は完全に昇順、右側20%のみを未ソート(シャッフル)にする
         const arr = Array.from({ length: size }, (_, i) => i + 1);
-        const swaps = Math.max(1, Math.floor(size * 0.2));
-        for (let s = 0; s < swaps; s++) {
-          const i = Math.floor(Math.random() * size);
-          const j = Math.floor(Math.random() * size);
+        const start = Math.floor(size * 0.8);
+        // フィッシャー–イェーツで右端区間のみシャッフル
+        for (let i = size - 1; i > start; i--) {
+          const j = start + Math.floor(Math.random() * (i - start + 1));
           [arr[i], arr[j]] = [arr[j], arr[i]];
         }
         return arr;
